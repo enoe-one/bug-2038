@@ -2,98 +2,108 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<title>Unix Time Full Visual</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Unix Time Full Control</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
+    * { box-sizing: border-box; }
+
     body {
         margin: 0;
-        height: 100vh;
+        min-height: 100vh;
         display: flex;
         justify-content: center;
         align-items: center;
         background: radial-gradient(circle at top, #0a0a0a, #000000);
         font-family: 'Segoe UI', sans-serif;
         color: white;
+        padding: 20px;
     }
 
     .container {
+        width: 100%;
+        max-width: 900px;
         text-align: center;
-        padding: 30px;
+        padding: 25px;
         border-radius: 25px;
         background: rgba(255,255,255,0.05);
         backdrop-filter: blur(15px);
         box-shadow: 0 0 40px rgba(0,255,200,0.2);
-        width: 720px;
     }
 
-    h1 {
-        color: #00ffd0;
-        margin-bottom: 15px;
-    }
+    h1 { color: #00ffd0; }
 
-    .time {
-        font-size: 32px;
-        margin-bottom: 5px;
-        text-shadow: 0 0 10px #00ffd0;
-    }
-
-    .limit {
-        color: #ff4d6d;
-        margin-bottom: 10px;
-    }
-
-    .percent {
-        margin-bottom: 10px;
-        font-size: 16px;
-    }
+    .time { font-size: clamp(24px, 4vw, 40px); }
+    .limit { color: #ff4d6d; margin: 10px 0; }
+    .percent { margin: 10px 0; }
+    .countdown { margin: 10px 0; color: #ff4d6d; }
 
     .bar-container {
         width: 100%;
-        height: 20px;
+        height: 18px;
         background: rgba(255,255,255,0.1);
         border-radius: 20px;
         overflow: hidden;
-        margin-bottom: 15px;
     }
 
     .bar {
         height: 100%;
         width: 0%;
         background: linear-gradient(90deg, #00ffd0, #00aaff);
-        box-shadow: 0 0 10px #00ffd0;
-        transition: width 0.5s ease;
+        transition: 0.4s;
     }
 
-    .countdown {
-        font-size: 18px;
-        margin: 10px 0;
-        color: #ff4d6d;
-        text-shadow: 0 0 10px #ff4d6d;
+    canvas { width: 100% !important; }
+
+    .controls {
+        margin-bottom: 15px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        justify-content: center;
     }
 
-    canvas {
-        margin-top: 10px;
+    button {
+        padding: 8px 12px;
+        border-radius: 10px;
+        border: none;
+        cursor: pointer;
+        background: #111;
+        color: #00ffd0;
+        border: 1px solid #00ffd0;
+    }
+
+    button.active {
+        background: #00ffd0;
+        color: black;
     }
 </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>⏱ UNIX TIME COMPLET</h1>
+    <h1>⏱ UNIX TIME</h1>
 
-    <div class="time" id="seconds">0</div>
-
-    <div class="limit">Limite 32 bits : 2 147 483 647</div>
-
-    <div class="percent" id="percent">0%</div>
-
-    <div class="bar-container">
-        <div class="bar" id="bar"></div>
+    <div class="controls">
+        <button onclick="toggle('seconds')" class="active">Secondes</button>
+        <button onclick="toggle('limit')" class="active">Limite</button>
+        <button onclick="toggle('percent')" class="active">%</button>
+        <button onclick="toggle('bar')" class="active">Barre</button>
+        <button onclick="toggle('countdown')" class="active">Countdown</button>
+        <button onclick="toggle('chart')" class="active">Graph</button>
     </div>
 
-    <div class="countdown" id="countdown">Chargement...</div>
+    <div id="seconds" class="time">0</div>
+    <div id="limit" class="limit">Limite 32 bits : 2 147 483 647</div>
+    <div id="percent" class="percent">0%</div>
 
-    <canvas id="chart" height="180"></canvas>
+    <div id="bar" class="bar-container">
+        <div class="bar" id="barFill"></div>
+    </div>
+
+    <div id="countdown" class="countdown">Chargement...</div>
+
+    <canvas id="chart"></canvas>
 </div>
 
 <script>
@@ -117,6 +127,8 @@ const chart = new Chart(ctx, {
     type: 'line',
     data: data,
     options: {
+        responsive: true,
+        maintainAspectRatio: false,
         scales: {
             x: { display: false },
             y: { min: 0, max: 100 }
@@ -125,13 +137,8 @@ const chart = new Chart(ctx, {
 });
 
 function formatTime(ms) {
-    const totalSec = Math.floor(ms / 1000);
-    const days = Math.floor(totalSec / 86400);
-    const hours = Math.floor((totalSec % 86400) / 3600);
-    const minutes = Math.floor((totalSec % 3600) / 60);
-    const seconds = totalSec % 60;
-
-    return `${days}j ${hours}h ${minutes}m ${seconds}s`;
+    const s = Math.floor(ms / 1000);
+    return `${Math.floor(s/86400)}j ${Math.floor((s%86400)/3600)}h ${Math.floor((s%3600)/60)}m ${s%60}s`;
 }
 
 function update() {
@@ -140,41 +147,39 @@ function update() {
     const percent = (nowSec / MAX) * 100;
 
     document.getElementById("seconds").textContent = nowSec.toLocaleString();
-    document.getElementById("percent").textContent = percent.toFixed(6) + " %";
+    document.getElementById("percent").textContent = percent.toFixed(4) + "%";
 
-    // barre
-    const bar = document.getElementById("bar");
+    const bar = document.getElementById("barFill");
     bar.style.width = percent + "%";
 
-    if (percent > 80) {
-        bar.style.background = "linear-gradient(90deg, #ff4d4d, #ff0000)";
-    } else if (percent > 50) {
-        bar.style.background = "linear-gradient(90deg, #ffaa00, #ff6600)";
-    } else {
-        bar.style.background = "linear-gradient(90deg, #00ffd0, #00aaff)";
-    }
-
-    // countdown
     const remaining = END - nowMs;
-    const countdownEl = document.getElementById("countdown");
+    document.getElementById("countdown").textContent = remaining > 0
+        ? "⏳ " + formatTime(remaining)
+        : "💥 LIMITE ATTEINTE";
 
-    if (remaining > 0) {
-        countdownEl.textContent = "⏳ Temps restant avant 2038 : " + formatTime(remaining);
-    } else {
-        countdownEl.textContent = "💥 LIMITE ATTEINTE !";
-    }
-
-    // graph
-    const timeLabel = new Date().toLocaleTimeString();
-    data.labels.push(timeLabel);
+    const t = new Date().toLocaleTimeString();
+    data.labels.push(t);
     data.datasets[0].data.push(percent);
 
-    if (data.labels.length > 30) {
+    if (data.labels.length > 40) {
         data.labels.shift();
         data.datasets[0].data.shift();
     }
 
     chart.update();
+}
+
+function toggle(id) {
+    const el = document.getElementById(id);
+    const btn = event.target;
+
+    if (el.style.display === 'none') {
+        el.style.display = '';
+        btn.classList.add('active');
+    } else {
+        el.style.display = 'none';
+        btn.classList.remove('active');
+    }
 }
 
 setInterval(update, 1000);
