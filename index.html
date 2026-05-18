@@ -3,138 +3,131 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Unix Time Full Control</title>
+<title>Unix Time Optimisé</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
-    * { box-sizing: border-box; }
-
     body {
-        margin: 0;
-        min-height: 100vh;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        background: radial-gradient(circle at top, #0a0a0a, #000000);
-        font-family: 'Segoe UI', sans-serif;
-        color: white;
-        padding: 20px;
-    }
-
-    .container {
-        width: 100%;
-        max-width: 900px;
+        background-color: #0f0f0f;
+        color: #00ffcc;
+        font-family: Arial, sans-serif;
         text-align: center;
-        padding: 25px;
-        border-radius: 25px;
-        background: rgba(255,255,255,0.05);
-        backdrop-filter: blur(15px);
-        box-shadow: 0 0 40px rgba(0,255,200,0.2);
+        padding: 20px;
+        margin: 0;
     }
 
-    h1 { color: #00ffd0; }
+    .box {
+        border: 2px solid #00ffcc;
+        border-radius: 15px;
+        padding: 20px;
+        margin: 15px auto;
+        max-width: 500px;
+        background-color: #1a1a1a;
+    }
 
-    .time { font-size: clamp(24px, 4vw, 40px); }
-    .limit { color: #ff4d6d; margin: 10px 0; }
-    .percent { margin: 10px 0; }
-    .countdown { margin: 10px 0; color: #ff4d6d; }
+    .big { font-size: 2em; }
+    .limit { color: #ff4d4d; }
 
-    .bar-container {
-        width: 100%;
-        height: 18px;
-        background: rgba(255,255,255,0.1);
-        border-radius: 20px;
+    .progress {
+        margin-top: 15px;
+        height: 20px;
+        background: #333;
+        border-radius: 10px;
         overflow: hidden;
     }
 
     .bar {
         height: 100%;
+        background: #00ffcc;
         width: 0%;
-        background: linear-gradient(90deg, #00ffd0, #00aaff);
-        transition: 0.4s;
     }
 
-    canvas { width: 100% !important; }
+    canvas {
+        max-width: 500px;
+        margin: 20px auto;
+        display: none;
+    }
 
     .controls {
-        margin-bottom: 15px;
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-        justify-content: center;
+        margin-top: 10px;
     }
 
     button {
-        padding: 8px 12px;
-        border-radius: 10px;
-        border: none;
-        cursor: pointer;
+        margin: 5px;
+        padding: 6px 10px;
         background: #111;
-        color: #00ffd0;
-        border: 1px solid #00ffd0;
-    }
-
-    button.active {
-        background: #00ffd0;
-        color: black;
+        color: #00ffcc;
+        border: 1px solid #00ffcc;
+        border-radius: 8px;
+        cursor: pointer;
     }
 </style>
 </head>
 <body>
 
-<div class="container">
-    <h1>⏱ UNIX TIME</h1>
+<h1>⏱ Temps Unix</h1>
 
-    <div class="controls">
-        <button onclick="toggle('seconds')" class="active">Secondes</button>
-        <button onclick="toggle('limit')" class="active">Limite</button>
-        <button onclick="toggle('percent')" class="active">%</button>
-        <button onclick="toggle('bar')" class="active">Barre</button>
-        <button onclick="toggle('countdown')" class="active">Countdown</button>
-        <button onclick="toggle('chart')" class="active">Graph</button>
+<div class="box">
+    <div>Secondes depuis 1970 :</div>
+    <div id="seconds" class="big">0</div>
+</div>
+
+<div class="box">
+    <div>Limite 32 bits :</div>
+    <div class="big limit">2 147 483 647</div>
+</div>
+
+<div class="box">
+    <div>Progression :</div>
+    <div id="percent">0%</div>
+    <div class="progress">
+        <div id="bar" class="bar"></div>
     </div>
+</div>
 
-    <div id="seconds" class="time">0</div>
-    <div id="limit" class="limit">Limite 32 bits : 2 147 483 647</div>
-    <div id="percent" class="percent">0%</div>
+<div class="box" id="countdownBox" style="display:none;">
+    <div id="countdown">...</div>
+</div>
 
-    <div id="bar" class="bar-container">
-        <div class="bar" id="barFill"></div>
-    </div>
+<canvas id="chart"></canvas>
 
-    <div id="countdown" class="countdown">Chargement...</div>
-
-    <canvas id="chart"></canvas>
+<div class="controls">
+    <button onclick="toggleCountdown()">Toggle Countdown</button>
+    <button onclick="toggleChart()">Toggle Graph</button>
 </div>
 
 <script>
 const MAX = 2147483647;
 const END = MAX * 1000;
 
-const ctx = document.getElementById('chart').getContext('2d');
+let showChart = false;
+let chart;
+let data;
+let lastChartUpdate = 0;
 
-const data = {
-    labels: [],
-    datasets: [{
-        label: 'Progression (%)',
-        data: [],
-        borderColor: '#00ffd0',
-        backgroundColor: 'rgba(0,255,208,0.2)',
-        tension: 0.3
-    }]
-};
+function initChart() {
+    const ctx = document.getElementById('chart').getContext('2d');
+    data = {
+        labels: [],
+        datasets: [{
+            data: [],
+            borderColor: '#00ffcc',
+            tension: 0.3
+        }]
+    };
 
-const chart = new Chart(ctx, {
-    type: 'line',
-    data: data,
-    options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-            x: { display: false },
-            y: { min: 0, max: 100 }
+    chart = new Chart(ctx, {
+        type: 'line',
+        data: data,
+        options: {
+            animation: false,
+            responsive: true,
+            scales: {
+                x: { display: false },
+                y: { min: 0, max: 100 }
+            }
         }
-    }
-});
+    });
+}
 
 function formatTime(ms) {
     const s = Math.floor(ms / 1000);
@@ -142,43 +135,50 @@ function formatTime(ms) {
 }
 
 function update() {
-    const nowMs = Date.now();
-    const nowSec = Math.floor(nowMs / 1000);
-    const percent = (nowSec / MAX) * 100;
+    const now = Date.now();
+    const sec = Math.floor(now / 1000);
+    const percent = (sec / MAX) * 100;
 
-    document.getElementById("seconds").textContent = nowSec.toLocaleString();
+    document.getElementById("seconds").textContent = sec.toLocaleString();
     document.getElementById("percent").textContent = percent.toFixed(4) + "%";
+    document.getElementById("bar").style.width = percent + "%";
 
-    const bar = document.getElementById("barFill");
-    bar.style.width = percent + "%";
-
-    const remaining = END - nowMs;
-    document.getElementById("countdown").textContent = remaining > 0
-        ? "⏳ " + formatTime(remaining)
-        : "💥 LIMITE ATTEINTE";
-
-    const t = new Date().toLocaleTimeString();
-    data.labels.push(t);
-    data.datasets[0].data.push(percent);
-
-    if (data.labels.length > 40) {
-        data.labels.shift();
-        data.datasets[0].data.shift();
+    const remaining = END - now;
+    if (remaining > 0) {
+        document.getElementById("countdown").textContent = formatTime(remaining);
+    } else {
+        document.getElementById("countdown").textContent = "💥 LIMITE ATTEINTE";
     }
 
-    chart.update();
+    // update graph every 2s only (anti lag)
+    if (showChart && now - lastChartUpdate > 2000) {
+        lastChartUpdate = now;
+        data.labels.push("");
+        data.datasets[0].data.push(percent);
+
+        if (data.labels.length > 20) {
+            data.labels.shift();
+            data.datasets[0].data.shift();
+        }
+
+        chart.update();
+    }
 }
 
-function toggle(id) {
-    const el = document.getElementById(id);
-    const btn = event.target;
+function toggleCountdown() {
+    const el = document.getElementById("countdownBox");
+    el.style.display = el.style.display === "none" ? "block" : "none";
+}
 
-    if (el.style.display === 'none') {
-        el.style.display = '';
-        btn.classList.add('active');
+function toggleChart() {
+    const canvas = document.getElementById("chart");
+    showChart = !showChart;
+
+    if (showChart) {
+        canvas.style.display = "block";
+        if (!chart) initChart();
     } else {
-        el.style.display = 'none';
-        btn.classList.remove('active');
+        canvas.style.display = "none";
     }
 }
 
