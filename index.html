@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Unix Time Visual</title>
+<style>
+    body {
+        margin: 0;
+        height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background: radial-gradient(circle at top, #0a0a0a, #000000);
+        font-family: 'Segoe UI', sans-serif;
+        color: white;
+    }
+
+    .container {
+        text-align: center;
+        padding: 40px;
+        border-radius: 25px;
+        background: rgba(255,255,255,0.05);
+        backdrop-filter: blur(15px);
+        box-shadow: 0 0 40px rgba(0,255,200,0.2);
+        width: 500px;
+    }
+
+    h1 {
+        margin-bottom: 30px;
+        font-size: 28px;
+        color: #00ffd0;
+        letter-spacing: 2px;
+    }
+
+    .time {
+        font-size: 42px;
+        font-weight: bold;
+        margin-bottom: 25px;
+        text-shadow: 0 0 10px #00ffd0;
+    }
+
+    .limit {
+        font-size: 20px;
+        color: #ff4d6d;
+        margin-bottom: 20px;
+    }
+
+    .percent {
+        font-size: 22px;
+        margin-bottom: 10px;
+    }
+
+    .bar-container {
+        width: 100%;
+        height: 25px;
+        background: rgba(255,255,255,0.1);
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
+    }
+
+    .bar {
+        height: 100%;
+        width: 0%;
+        background: linear-gradient(90deg, #00ffd0, #00aaff);
+        box-shadow: 0 0 15px #00ffd0;
+        transition: width 0.5s ease;
+    }
+
+    .footer {
+        margin-top: 20px;
+        font-size: 14px;
+        color: rgba(255,255,255,0.5);
+    }
+
+</style>
+</head>
+<body>
+
+<div class="container">
+    <h1>⏱ UNIX TIME</h1>
+
+    <div class="time" id="seconds">0</div>
+
+    <div class="limit">Limite 32 bits : 2 147 483 647</div>
+
+    <div class="percent" id="percent">0%</div>
+
+    <div class="bar-container">
+        <div class="bar" id="bar"></div>
+    </div>
+
+    <div class="footer">Bug de l'an 2038 en approche...</div>
+</div>
+
+<script>
+    const MAX = 2147483647;
+
+    function update() {
+        const now = Math.floor(Date.now() / 1000);
+        const percent = (now / MAX) * 100;
+
+        document.getElementById("seconds").textContent = now.toLocaleString();
+        document.getElementById("percent").textContent = percent.toFixed(6) + " %";
+
+        const bar = document.getElementById("bar");
+        bar.style.width = percent + "%";
+
+        // changement de couleur dynamique
+        if (percent > 80) {
+            bar.style.background = "linear-gradient(90deg, #ff4d4d, #ff0000)";
+        } else if (percent > 50) {
+            bar.style.background = "linear-gradient(90deg, #ffaa00, #ff6600)";
+        }
+    }
+
+    setInterval(update, 1000);
+    update();
+</script>
+
+</body>
+</html>
